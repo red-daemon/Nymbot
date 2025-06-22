@@ -1,6 +1,7 @@
 import arcade
 import numpy as np
-from config import *
+import math
+from config import SCREEN_HEIGHT, SCREEN_WIDTH, BACKGROUND_COLOR
 
 class Environment(arcade.Window):
     def __init__(self):
@@ -36,5 +37,8 @@ class Environment(arcade.Window):
         # Dibujar comida
         arcade.draw_circle_filled(*self.food_pos, 8, arcade.color.APPLE_GREEN)
     
-    def check_food_collision(self, pos, radius):
-        return np.linalg.norm(np.array(pos) - np.array(self.food_pos)) < radius + 8
+    def check_food_collision(self, pos, radius=0):
+        """Comprueba colisión con comida (puede ser punto exacto)"""
+        return math.sqrt((pos[0] - self.food_pos[0])**2 + 
+                         (pos[1] - self.food_pos[1])**2) < 8 + radius
+    

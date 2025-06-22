@@ -15,3 +15,8 @@ INITIAL_MAX_BODY_ROT = 0.1
 INITIAL_MAX_EYE_ROT = 0.05
 FOOD_ENERGY = 15.0
 BASE_ENERGY_COST = 0.01
+
+# Parámetros de visión
+INITIAL_FOV = 60  # Grados
+MAX_RAY_DISTANCE = 1000  # Suficiente para alcanzar cualquier pared
+FOV_ENERGY_COST_PER_DEGREE = 0.001  # Costo por grado de FOV

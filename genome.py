@@ -19,6 +19,8 @@ class NymbotGenome:
         # Red neuronal
         self.brain_architecture = [32, 16]
         self.brain = None
+
+        self.fov = INITIAL_FOV
         
         # Inicializar cerebro
         self.initialize_brain()  # Esto llama al método de abajo
@@ -27,7 +29,7 @@ class NymbotGenome:
         input_size = self.vision_resolution
         # Ahora solo pasamos input_size y brain_architecture
         self.brain = NymbotBrain(input_size, self.brain_architecture)
-        
+
     def mutate(self, mutation_rate=0.1):
         # Mutar parámetros sensoriales/motores
         params = [
@@ -48,6 +50,10 @@ class NymbotGenome:
                 noise = torch.randn_like(state_dict[key]) * 0.1
                 state_dict[key] += noise
             self.brain.load_state_dict(state_dict)
+
+        # Mutar FOV
+        if random.random() < mutation_rate:
+            self.fov = np.clip(self.fov * random.uniform(0.9, 1.1), 10, 360)
     
     def complexity_cost(self):
         """Calcula el costo energético de la complejidad"""
@@ -58,5 +64,8 @@ class NymbotGenome:
         
         # Costo cerebral (simplificado)
         brain_cost = 0.0001 * sum(self.brain_architecture)
+
+        # Costo por FOV (más amplio = más costoso)
+        fov_cost = FOV_ENERGY_COST_PER_DEGREE * self.fov
         
-        return BASE_ENERGY_COST + vision_cost + fov_cost + step_cost + rot_cost + brain_cost
+        return BASE_ENERGY_COST + vision_cost + fov_cost + step_cost + rot_cost + brain_cost + fov_cost

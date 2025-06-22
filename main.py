@@ -1,10 +1,10 @@
 # main.py
 import arcade
 import math
-import numpy as np
+# import numpy as np
 import random
 from nymbot import Nymbot
-from config import *
+from config import SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_COLOR, FOOD_ENERGY, MAX_STEPS
 
 class Simulation(arcade.Window):
     def __init__(self):
@@ -72,45 +72,57 @@ class Simulation(arcade.Window):
         end_eye_y = self.nymbot.position[1] + 25 * math.sin(self.nymbot.eye_angle)
         arcade.draw_line(*self.nymbot.position, end_eye_x, end_eye_y, arcade.color.CYAN, 2)
         
-        # Dibujar solo los rayos extremos del campo visual
-        arcade.draw_line(
-            self.nymbot.position[0], self.nymbot.position[1],
-            self.nymbot.left_ray_end[0], self.nymbot.left_ray_end[1],
-            arcade.color.LIGHT_GRAY,  # Color gris claro para los bordes
-            1
-        )
-        arcade.draw_line(
-            self.nymbot.position[0], self.nymbot.position[1],
-            self.nymbot.right_ray_end[0], self.nymbot.right_ray_end[1],
-            arcade.color.LIGHT_GRAY,  # Color gris claro para los bordes
-            1
-        )
+        # Dibujar el cono de visión completo
+        self.draw_vision_cone()
         
         # Dibujar barra de visión en la parte inferior
         self.draw_vision_bar()
         
         # Actualizar y dibujar texto
-        self.info_text.text = f"Episodio: {self.current_episode} | Pasos: {self.total_steps} | Energía: {self.nymbot.energy:.1f}"
+        self.info_text.text = f"Episodio: {self.current_episode} | Pasos: {self.total_steps} | Energía: {self.nymbot.energy:.1f} | FOV: {self.nymbot.genome.fov:.1f}°"
         self.info_text.draw()
     
+    def draw_vision_cone(self):
+        """Dibuja el cono de visión completo"""
+        if not hasattr(self.nymbot, 'ray_endpoints') or len(self.nymbot.ray_endpoints) < 2:
+            return
+        
+        # Crear puntos para el cono: posición del nymbot + puntos finales de los rayos
+        points = [(self.nymbot.position[0], self.nymbot.position[1])]
+        points.extend(self.nymbot.ray_endpoints)
+        
+        # Dibujar cono semitransparente
+        arcade.draw_polygon_filled(points, (173, 216, 230, 50))  # Azul claro con transparencia
+        
+        # Dibujar bordes del cono
+        arcade.draw_line(
+            self.nymbot.position[0], self.nymbot.position[1],
+            self.nymbot.ray_endpoints[0][0], self.nymbot.ray_endpoints[0][1],
+            arcade.color.DARK_BLUE, 1
+        )
+        arcade.draw_line(
+            self.nymbot.position[0], self.nymbot.position[1],
+            self.nymbot.ray_endpoints[-1][0], self.nymbot.ray_endpoints[-1][1],
+            arcade.color.DARK_BLUE, 1
+        )
+    
     def draw_vision_bar(self):
-        """Dibuja una representación de lo que el nymbot está viendo"""
+        """Dibuja la barra de visión en la parte inferior"""
         bar_height = 50
-        bar_y = 10  # Parte inferior de la pantalla
+        bar_y = 10
         ray_count = self.nymbot.vision_resolution
         ray_width = SCREEN_WIDTH / ray_count
         
         for i in range(ray_count):
-            # Calcular intensidad (0-255)
             intensity = int(self.nymbot.vision_data[i] * 255)
             
-            # Crear color basado en lo detectado
             if self.nymbot.ray_colors[i] == (0, 255, 0):  # Comida
                 color = (0, intensity, 0)
-            else:  # Otros objetos (por ahora gris)
+            elif self.nymbot.ray_colors[i] == (255, 0, 0):  # Pared
+                color = (intensity, 0, 0)
+            else:
                 color = (intensity, intensity, intensity)
             
-            # Dibujar segmento de visión con draw_rect_filled
             arcade.draw_rect_filled(
                 rect=arcade.rect.XYWH(i * ray_width, bar_y, ray_width, bar_height),
                 color=color
@@ -139,6 +151,12 @@ class Simulation(arcade.Window):
         self.total_steps += 1
         if not is_alive or self.total_steps >= MAX_STEPS:
             self.reset_episode()
+
+        # Mostrar FOV actual en el texto
+        self.info_text.text = (f"Episodio: {self.current_episode} | "
+                              f"Pasos: {self.total_steps} | "
+                              f"Energía: {self.nymbot.energy:.1f} | "
+                              f"FOV: {self.nymbot.genome.fov:.1f}°")
     
     def reset_episode(self):
         # Posición y orientación aleatorias
