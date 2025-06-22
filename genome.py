@@ -3,12 +3,12 @@ import random
 import numpy as np
 import torch
 from brain import NymbotBrain
-from config import *
+from config import INITIAL_FOV, INITIAL_MAX_BODY_ROT, INITIAL_MAX_EYE_ROT, INITIAL_MAX_STEP, FOV_ENERGY_COST_PER_DEGREE, BASE_ENERGY_COST
 
 class NymbotGenome:
     def __init__(self):
         # Parámetros sensoriales
-        self.vision_resolution = INITIAL_VISION_RESOLUTION
+        self.vision_resolution = INITIAL_FOV
         self.fov = INITIAL_FOV
         
         # Parámetros motores
@@ -55,7 +55,7 @@ class NymbotGenome:
         if random.random() < mutation_rate:
             self.fov = np.clip(self.fov * random.uniform(0.9, 1.1), 10, 360)
     
-    def complexity_cost(self):
+    def complexity_cost(self):  # XXX Cambiar para que el costo de la energia sea correspondiente a su uso y no sus rangos
         """Calcula el costo energético de la complejidad"""
         vision_cost = 0.002 * self.vision_resolution
         fov_cost = 0.0001 * self.fov

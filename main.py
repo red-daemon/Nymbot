@@ -108,10 +108,11 @@ class Simulation(arcade.Window):
     
     def draw_vision_bar(self):
         """Dibuja la barra de visión en la parte inferior"""
-        bar_height = 50
         bar_y = 10
+        pad_x = 10
+        bar_height = 28 # (50 - 20)/2
         ray_count = self.nymbot.vision_resolution
-        ray_width = SCREEN_WIDTH / ray_count
+        ray_width = (SCREEN_WIDTH - 2*pad_x) / ray_count
         
         for i in range(ray_count):
             intensity = int(self.nymbot.vision_data[i] * 255)
@@ -123,9 +124,16 @@ class Simulation(arcade.Window):
             else:
                 color = (intensity, intensity, intensity)
             
+            rect_cell= arcade.rect.LBWH(pad_x + i * ray_width, bar_y, ray_width, bar_height)
+            
             arcade.draw_rect_filled(
-                rect=arcade.rect.XYWH(i * ray_width, bar_y, ray_width, bar_height),
+                rect=rect_cell,
                 color=color
+            )
+            
+            arcade.draw_rect_outline(
+                rect=rect_cell,
+                color=(255, 255, 255)
             )
     
     def on_update(self, delta_time):

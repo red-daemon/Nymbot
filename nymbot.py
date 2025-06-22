@@ -9,7 +9,7 @@ class Nymbot:
         self.position = [x, y]
         self.body_angle = 0.0
         self.eye_angle = 0.0
-        self.energy = 100.0
+        self.energy = 1000.0
         self.genome = NymbotGenome()
         
         # Datos de visión
@@ -39,9 +39,10 @@ class Nymbot:
                 self.ray_colors[i] = (0, 255, 0)  # Verde para comida
             elif hit_object == "wall":
                 # Calcular distancia (para intensidad)
-                dist = math.sqrt((self.position[0]-ray_end[0])**2 + 
-                                (self.position[1]-ray_end[1])**2)
-                self.vision_data[i] = max(0, 1.0 - dist/300)  # Más cerca = más intenso
+                # dist = math.sqrt((self.position[0]-ray_end[0])**2 + 
+                #                 (self.position[1]-ray_end[1])**2)
+                # self.vision_data[i] = max(0, 1.0 - dist/300)  # Más cerca = más intenso
+                self.vision_data[i] = 0.0
                 self.ray_colors[i] = (255, 0, 0)  # Rojo para paredes
         
         return self.vision_data
@@ -59,7 +60,7 @@ class Nymbot:
         # action[2]: rotación del ojo
         self.eye_angle += action[2] * self.genome.max_eye_rotation
         
-        # Normalizar ángulos
+        # Normalizar ángulos para quedar entre (0, 2*Pi)
         self.body_angle %= 2 * math.pi
         self.eye_angle %= 2 * math.pi
     
