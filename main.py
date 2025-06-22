@@ -26,8 +26,8 @@ class Simulation(arcade.Window):
         # Texto
         self.info_text = arcade.Text(
             text="",
-            start_x=10,
-            start_y=SCREEN_HEIGHT - 30,
+            x=10,
+            y=SCREEN_HEIGHT - 30,
             color=arcade.color.WHITE,
             font_size=14
         )
