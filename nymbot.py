@@ -9,13 +9,15 @@ class Nymbot:
         self.eye_angle = 0.0
         self.energy = 100.0
         self.genome = NymbotGenome()
-        self.vision_data = np.zeros(self.genome.vision_resolution)
-
+        
         # Datos de visión por rayo
         self.vision_resolution = self.genome.vision_resolution
         self.vision_data = np.zeros(self.vision_resolution)  # Intensidad
         self.ray_colors = [(0, 0, 0)] * self.vision_resolution  # Color RGB
-        self.ray_endpoints = [(0, 0)] * self.vision_resolution  # Puntos finales
+        
+        # Solo almacenamos los puntos finales de los rayos extremos
+        self.left_ray_end = (0, 0)
+        self.right_ray_end = (0, 0)
     
     def update_vision(self, environment):
         """Simulación simplificada que detecta comida y paredes"""
@@ -30,17 +32,27 @@ class Nymbot:
         
         # Ángulo de inicio y paso
         start_angle = self.eye_angle - math.radians(self.genome.fov / 2)
+        end_angle = self.eye_angle + math.radians(self.genome.fov / 2)
         angle_step = math.radians(self.genome.fov) / self.vision_resolution
         
-        # Simular rayos
+        # Calcular puntos finales de los rayos extremos (siempre visibles)
+        max_dist = 300  # Distancia máxima del rayo
+        
+        # Rayo izquierdo (inicio del FOV)
+        self.left_ray_end = (
+            self.position[0] + max_dist * math.cos(start_angle),
+            self.position[1] + max_dist * math.sin(start_angle)
+        )
+        
+        # Rayo derecho (fin del FOV)
+        self.right_ray_end = (
+            self.position[0] + max_dist * math.cos(end_angle),
+            self.position[1] + max_dist * math.sin(end_angle)
+        )
+        
+        # Simular rayos para la barra de visión
         for i in range(self.vision_resolution):
             ray_angle = start_angle + i * angle_step
-            max_dist = 300  # Distancia máxima del rayo
-            
-            # Calcular punto final del rayo
-            end_x = self.position[0] + max_dist * math.cos(ray_angle)
-            end_y = self.position[1] + max_dist * math.sin(ray_angle)
-            self.ray_endpoints[i] = (end_x, end_y)
             
             # Comprobar si este rayo apunta a la comida
             angle_diff = abs((food_dir - ray_angle + math.pi) % (2 * math.pi) - math.pi)
@@ -48,8 +60,6 @@ class Nymbot:
                 dist_factor = 1.0 - min(food_dist / max_dist, 1.0)
                 self.vision_data[i] = dist_factor
                 self.ray_colors[i] = (0, 255, 0)  # Verde para comida
-        
-        # TODO: Añadir detección de paredes aquí
         
         return self.vision_data
     

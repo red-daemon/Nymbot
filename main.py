@@ -67,16 +67,24 @@ class Simulation(arcade.Window):
         end_y = self.nymbot.position[1] + 20 * math.sin(self.nymbot.body_angle)
         arcade.draw_line(*self.nymbot.position, end_x, end_y, arcade.color.RED, 2)
         
-        # Dibujar rayos de visión
-        for i, end_point in enumerate(self.nymbot.ray_endpoints):
-            # Color del rayo según lo detectado
-            ray_color = self.nymbot.ray_colors[i]
-            arcade.draw_line(
-                self.nymbot.position[0], self.nymbot.position[1],
-                end_point[0], end_point[1],
-                ray_color,
-                1
-            )
+        # Dibujar dirección de la visión (línea central)
+        end_eye_x = self.nymbot.position[0] + 25 * math.cos(self.nymbot.eye_angle)
+        end_eye_y = self.nymbot.position[1] + 25 * math.sin(self.nymbot.eye_angle)
+        arcade.draw_line(*self.nymbot.position, end_eye_x, end_eye_y, arcade.color.CYAN, 2)
+        
+        # Dibujar solo los rayos extremos del campo visual
+        arcade.draw_line(
+            self.nymbot.position[0], self.nymbot.position[1],
+            self.nymbot.left_ray_end[0], self.nymbot.left_ray_end[1],
+            arcade.color.LIGHT_GRAY,  # Color gris claro para los bordes
+            1
+        )
+        arcade.draw_line(
+            self.nymbot.position[0], self.nymbot.position[1],
+            self.nymbot.right_ray_end[0], self.nymbot.right_ray_end[1],
+            arcade.color.LIGHT_GRAY,  # Color gris claro para los bordes
+            1
+        )
         
         # Dibujar barra de visión en la parte inferior
         self.draw_vision_bar()
@@ -102,15 +110,9 @@ class Simulation(arcade.Window):
             else:  # Otros objetos (por ahora gris)
                 color = (intensity, intensity, intensity)
             
-            # Calcular posición del rectángulo
-            x = i * ray_width
-            y = bar_y
-            width = ray_width
-            height = bar_height
-            
             # Dibujar segmento de visión con draw_rect_filled
             arcade.draw_rect_filled(
-                rect=arcade.rect.XYWH(x, y, width, height),
+                rect=arcade.rect.XYWH(i * ray_width, bar_y, ray_width, bar_height),
                 color=color
             )
     
