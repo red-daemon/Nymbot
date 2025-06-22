@@ -10,26 +10,48 @@ class Nymbot:
         self.energy = 100.0
         self.genome = NymbotGenome()
         self.vision_data = np.zeros(self.genome.vision_resolution)
+
+        # Datos de visión por rayo
+        self.vision_resolution = self.genome.vision_resolution
+        self.vision_data = np.zeros(self.vision_resolution)  # Intensidad
+        self.ray_colors = [(0, 0, 0)] * self.vision_resolution  # Color RGB
+        self.ray_endpoints = [(0, 0)] * self.vision_resolution  # Puntos finales
     
     def update_vision(self, environment):
-        """Versión simplificada para probar"""
+        """Simulación simplificada que detecta comida y paredes"""
+        # Limpiar datos previos
+        self.vision_data.fill(0.0)
+        self.ray_colors = [(0, 0, 0)] * self.vision_resolution
+        
         # Vector hacia la comida
         food_vec = np.array(environment.food_pos) - np.array(self.position)
         food_dist = np.linalg.norm(food_vec)
         food_dir = math.atan2(food_vec[1], food_vec[0])
         
-        # Diferencia angular entre visión y comida
-        angle_diff = abs((food_dir - self.eye_angle + math.pi) % (2 * math.pi) - math.pi)
+        # Ángulo de inicio y paso
+        start_angle = self.eye_angle - math.radians(self.genome.fov / 2)
+        angle_step = math.radians(self.genome.fov) / self.vision_resolution
         
-        # Comprobar si está en el campo de visión
-        in_fov = angle_diff < math.radians(self.genome.fov / 2)
+        # Simular rayos
+        for i in range(self.vision_resolution):
+            ray_angle = start_angle + i * angle_step
+            max_dist = 300  # Distancia máxima del rayo
+            
+            # Calcular punto final del rayo
+            end_x = self.position[0] + max_dist * math.cos(ray_angle)
+            end_y = self.position[1] + max_dist * math.sin(ray_angle)
+            self.ray_endpoints[i] = (end_x, end_y)
+            
+            # Comprobar si este rayo apunta a la comida
+            angle_diff = abs((food_dir - ray_angle + math.pi) % (2 * math.pi) - math.pi)
+            if angle_diff < math.radians(5):  # Tolerancia de 5 grados
+                dist_factor = 1.0 - min(food_dist / max_dist, 1.0)
+                self.vision_data[i] = dist_factor
+                self.ray_colors[i] = (0, 255, 0)  # Verde para comida
         
-        # Actualizar datos de visión
-        if in_fov:
-            intensity = 1.0 - min(food_dist / 300, 1.0)
-            self.vision_data.fill(intensity)
-        else:
-            self.vision_data.fill(0.0)
+        # TODO: Añadir detección de paredes aquí
+        
+        return self.vision_data
     
     def move(self, action):
         """Mover según la acción seleccionada (ahora 3 valores continuos)"""
