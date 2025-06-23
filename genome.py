@@ -8,7 +8,7 @@ from config import INITIAL_FOV, INITIAL_MAX_BODY_ROT, INITIAL_MAX_EYE_ROT, INITI
 class NymbotGenome:
     def __init__(self):
         # Parámetros sensoriales
-        self.vision_resolution = INITIAL_FOV
+        # self.vision_resolution = INITIAL_FOV
         self.fov = INITIAL_FOV
         
         # Parámetros motores
@@ -26,7 +26,7 @@ class NymbotGenome:
         self.initialize_brain()  # Esto llama al método de abajo
     
     def initialize_brain(self):
-        input_size = self.vision_resolution
+        input_size = self.fov
         # Ahora solo pasamos input_size y brain_architecture
         self.brain = NymbotBrain(input_size, self.brain_architecture)
 
@@ -57,7 +57,6 @@ class NymbotGenome:
     
     def complexity_cost(self):  # XXX Cambiar para que el costo de la energia sea correspondiente a su uso y no sus rangos
         """Calcula el costo energético de la complejidad"""
-        vision_cost = 0.002 * self.vision_resolution
         fov_cost = 0.0001 * self.fov
         step_cost = 0.005 * self.max_step_size
         rot_cost = 0.003 * (self.max_body_rotation + self.max_eye_rotation)
@@ -68,4 +67,4 @@ class NymbotGenome:
         # Costo por FOV (más amplio = más costoso)
         fov_cost = FOV_ENERGY_COST_PER_DEGREE * self.fov
         
-        return BASE_ENERGY_COST + vision_cost + fov_cost + step_cost + rot_cost + brain_cost + fov_cost
+        return BASE_ENERGY_COST + step_cost + rot_cost + brain_cost + fov_cost
