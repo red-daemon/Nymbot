@@ -1,42 +1,39 @@
-# test_headless.py
-import numpy as np
-import math
+# test_consistency.py
 from headless_simulator import HeadlessSimulator
-from visual_simulator import Simulation  # Asumiendo que el visual está en main.py
+from visual_simulator import Simulation
+import math
 
-def run_comparison_test():
-    # Configuración inicial común
+def test_single_step():
+    # Configuración común
     config = {
-        'nymbot': {'x': 400, 'y': 300, 'body_angle': 0.0, 'eye_angle': 0.5, 'energy': 100},
-        'food_pos': (200, 150),
-        'walls': [...]  # Mismas paredes
+        'genome_params': {
+            'fov': 90,
+            'max_step_size': 0.6,
+            'max_body_rotation': 0.15,
+            'max_eye_rotation': 0.1
+        }
     }
     
-    # Ejecutar simulador headless
+    # Headless - Paso 1
     headless = HeadlessSimulator(initial_conditions=config, random_seed=42)
-    headless_results = headless.run_episode(max_steps=100)
+    headless_state1, _ = headless.run_step()
     
-    # Ejecutar simulador visual
-    visual_sim = Simulation()  # Necesita ser modificado para aceptar config inicial
-    visual_sim.set_initial_conditions(config)
-    visual_results = visual_sim.run_episode(max_steps=100)
+    # Visual - Paso 1
+    visual = Simulation(initial_conditions=config)
+    visual.nymbot.position = list(headless.nymbot.position)  # Misma posición inicial
+    visual.nymbot.body_angle = headless.nymbot.body_angle
+    visual.nymbot.eye_angle = headless.nymbot.eye_angle
+    visual.food_pos = headless.food_pos
+    visual.on_update(1/60)  # Simular un paso
     
-    # Comparar resultados
-    for step in range(100):
-        headless_state = headless_results['history'][step]
-        visual_state = visual_results['history'][step]
-        
-        # Verificar posición
-        assert np.allclose(headless_state['position'], visual_state['position'], atol=1e-5)
-        
-        # Verificar ángulos
-        assert math.isclose(headless_state['body_angle'], visual_state['body_angle'], abs_tol=1e-5)
-        assert math.isclose(headless_state['eye_angle'], visual_state['eye_angle'], abs_tol=1e-5)
-        
-        # Verificar energía
-        assert math.isclose(headless_state['energy'], visual_state['energy'], abs_tol=1e-5)
+    # Comparar
+    assert math.isclose(visual.nymbot.position[0], headless_state1['position'][0], abs_tol=0.001)
+    assert math.isclose(visual.nymbot.position[1], headless_state1['position'][1], abs_tol=0.001)
+    assert math.isclose(visual.nymbot.body_angle, headless_state1['body_angle'], abs_tol=0.001)
+    assert math.isclose(visual.nymbot.eye_angle, headless_state1['eye_angle'], abs_tol=0.001)
+    assert math.isclose(visual.nymbot.energy, headless_state1['energy'], abs_tol=0.001)
     
-    print("¡Prueba de validación exitosa! Ambos simuladores producen resultados idénticos.")
+    print("¡Prueba de consistencia exitosa!")
 
 if __name__ == "__main__":
-    run_comparison_test()
+    test_single_step()

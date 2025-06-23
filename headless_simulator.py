@@ -1,102 +1,65 @@
 # headless_simulator.py
-import numpy as np
 import math
+import random
 from nymbot import Nymbot
 from config import MAX_STEPS, FOOD_ENERGY, INITIAL_FOV, INITIAL_MAX_STEP, INITIAL_MAX_BODY_ROT, INITIAL_MAX_EYE_ROT
 
 class HeadlessSimulator:
     def __init__(self, initial_conditions=None, random_seed=None):
-        """
-        Inicializa el simulador headless con condiciones iniciales específicas.
-        
-        Args:
-            initial_conditions (dict): Estado inicial completo del sistema
-            random_seed (int): Semilla para reproducibilidad
-        """
         if random_seed is not None:
-            np.random.seed(random_seed)
+            random.seed(random_seed)
         
-        # Condiciones iniciales predeterminadas si no se proporcionan
-        self.initial_conditions = initial_conditions or self.default_initial_conditions()
+        # Configurar paredes fijas (como en visual_simulator)
+        self.walls = [
+            [(50, 50), (750, 50)],   # Inferior
+            [(750, 50), (750, 550)],  # Derecha
+            [(750, 550), (50, 550)],  # Superior
+            [(50, 550), (50, 50)]     # Izquierda
+        ]
         
-        # Configurar entorno
-        self.walls = self.initial_conditions['walls']
-        self.food_pos = self.initial_conditions['food_pos']
-        
-        # Crear nymbot con condiciones iniciales
-        self.nymbot = self.create_nymbot()
+        # Inicializar condiciones
+        self.initial_conditions = initial_conditions or {}
+        self.reset_simulation()
         
         # Estado de simulación
         self.current_step = 0
+        self.current_episode = 0
         self.total_food_collected = 0
-        self.history = []
 
-    def default_initial_conditions(self):
-        """Genera condiciones iniciales predeterminadas"""
-        return {
-            'nymbot': {
-                'x': 400,
-                'y': 300,
-                'body_angle': 0.0,
-                'eye_angle': 0.0,
-                'energy': 100.0
-            },
-            'food_pos': (200, 150),
-            'walls': [
-                [(50, 50), (750, 50)],   # Inferior
-                [(750, 50), (750, 550)],  # Derecha
-                [(750, 550), (50, 550)],  # Superior
-                [(50, 550), (50, 50)]     # Izquierda
-            ],
-            'genome_params': {
-                'vision_resolution': INITIAL_FOV,
-                'fov': INITIAL_FOV,
-                'max_step_size': INITIAL_MAX_STEP,
-                'max_body_rotation': INITIAL_MAX_BODY_ROT,
-                'max_eye_rotation': INITIAL_MAX_EYE_ROT
-            }
-        }
+    def reset_simulation(self):
+        """Inicializa o reinicia la simulación"""
+        # Posición aleatoria de comida
+        self.food_pos = self._random_position()
+        
+        # Crear nymbot con posición aleatoria
+        self.nymbot = Nymbot(self.walls, self.food_pos)
+        
+        # Aplicar parámetros personalizados si existen
+        if 'genome_params' in self.initial_conditions:
+            genome_params = self.initial_conditions['genome_params']
+            self.nymbot.genome.fov = genome_params.get('fov', INITIAL_FOV)
+            self.nymbot.genome.max_step_size = genome_params.get('max_step_size', INITIAL_MAX_STEP)
+            self.nymbot.genome.max_body_rotation = genome_params.get('max_body_rotation', INITIAL_MAX_BODY_ROT)
+            self.nymbot.genome.max_eye_rotation = genome_params.get('max_eye_rotation', INITIAL_MAX_EYE_ROT)
+        
+        # Resetear contadores
+        self.current_step = 0
+        self.total_food_collected = 0
 
-    def create_nymbot(self):
-        """Crea una instancia de Nymbot con las condiciones iniciales"""
-        nymbot = Nymbot(
-            x=self.initial_conditions['nymbot']['x'],
-            y=self.initial_conditions['nymbot']['y'],
-            walls=self.walls,
-            food_pos=self.food_pos
-        )
-        
-        # Configurar estado inicial
-        nymbot.body_angle = self.initial_conditions['nymbot']['body_angle']
-        nymbot.eye_angle = self.initial_conditions['nymbot']['eye_angle']
-        nymbot.energy = self.initial_conditions['nymbot']['energy']
-        
-        # Configurar parámetros del genoma
-        genome_params = self.initial_conditions['genome_params']
-        nymbot.genome.vision_resolution = genome_params['vision_resolution']
-        nymbot.genome.fov = genome_params['fov']
-        nymbot.genome.max_step_size = genome_params['max_step_size']
-        nymbot.genome.max_body_rotation = genome_params['max_body_rotation']
-        nymbot.genome.max_eye_rotation = genome_params['max_eye_rotation']
-        
-        return nymbot
+    def _random_position(self):
+        """Genera posición aleatoria dentro del área válida"""
+        return [
+            random.randint(100, 700),  # SCREEN_WIDTH = 800
+            random.randint(100, 500)   # SCREEN_HEIGHT = 600
+        ]
 
-    def run_step(self, action=None):
-        """
-        Ejecuta un único paso de simulación.
-        
-        Args:
-            action (array, optional): Acción a ejecutar. Si es None, se usa la red neuronal.
-        
-        Returns:
-            dict: Estado actual del sistema
-        """
+    def run_step(self):
+        """Ejecuta un único paso de simulación"""
         # Actualizar visión
-        vision_data = self.nymbot.update_vision()
+        self.nymbot.update_vision()
         
-        # Obtener acción si no se proporciona
-        if action is None:
-            action = self.nymbot.genome.brain.get_action(vision_data)
+        # Obtener acción del cerebro
+        action = self.nymbot.genome.brain.get_action(self.nymbot.vision_data)
         
         # Mover nymbot
         self.nymbot.move(action)
@@ -105,16 +68,16 @@ class HeadlessSimulator:
         is_alive = self.nymbot.update_energy()
         
         # Verificar colisión con comida
-        food_collected = 0
-        if self.nymbot.check_food_collision():
+        if self.check_food_collision():
             self.nymbot.energy += FOOD_ENERGY
-            food_collected = 1
             self.total_food_collected += 1
-            # Reposicionar comida
-            self.food_pos = (
-                np.random.randint(100, 700),
-                np.random.randint(100, 500)
-            )
+            self.food_pos = self._random_position()
+        
+        # Avanzar contador
+        self.current_step += 1
+        
+        # Determinar si el episodio ha terminado
+        done = not is_alive or self.current_step >= MAX_STEPS
         
         # Guardar estado actual
         state = {
@@ -123,48 +86,44 @@ class HeadlessSimulator:
             'body_angle': self.nymbot.body_angle,
             'eye_angle': self.nymbot.eye_angle,
             'energy': self.nymbot.energy,
-            'vision': vision_data.copy(),
-            'food_pos': tuple(self.food_pos),
-            'food_collected': food_collected,
-            'is_alive': is_alive
+            'food_pos': self.food_pos,
+            'done': done
         }
-        self.history.append(state)
         
-        # Avanzar contador
-        self.current_step += 1
-        
-        return state, not is_alive
+        return state, done
 
     def run_episode(self, max_steps=MAX_STEPS):
-        """
-        Ejecuta un episodio completo de simulación.
+        """Ejecuta un episodio completo"""
+        self.reset_simulation()
         
-        Args:
-            max_steps (int): Número máximo de pasos
-        
-        Returns:
-            dict: Resultados del episodio
-        """
-        self.reset()
-        
+        history = []
         done = False
-        while self.current_step < max_steps and not done:
-            _, done = self.run_step()
+        
+        while not done and self.current_step < max_steps:
+            state, done = self.run_step()
+            history.append(state)
         
         return {
             'total_steps': self.current_step,
             'final_energy': self.nymbot.energy,
             'food_collected': self.total_food_collected,
-            'history': self.history
+            'history': history
         }
 
-    def reset(self):
-        """Reinicia la simulación a las condiciones iniciales"""
-        self.nymbot = self.create_nymbot()
-        self.food_pos = self.initial_conditions['food_pos']
+    def check_food_collision(self):
+        """Versión simplificada de detección de comida"""
+        return math.dist(self.nymbot.position, self.food_pos) < 18  # Radio 10 + 8
+
+    def reset_episode(self):
+        """Reinicia el episodio manteniendo configuración"""
+        self.nymbot.position = self._random_position()
+        self.nymbot.body_angle = random.uniform(0, 2 * math.pi)
+        self.nymbot.eye_angle = random.uniform(0, 2 * math.pi)
+        self.nymbot.energy = 100.0
+        self.food_pos = self._random_position()
         self.current_step = 0
         self.total_food_collected = 0
-        self.history = []
+        self.current_episode += 1
 
     def get_current_state(self):
         """Devuelve el estado actual del simulador"""
@@ -175,25 +134,36 @@ class HeadlessSimulator:
                 'eye_angle': self.nymbot.eye_angle,
                 'energy': self.nymbot.energy
             },
-            'food_pos': tuple(self.food_pos),
+            'food_pos': self.food_pos,
             'step': self.current_step
         }
-
-    def save_snapshot(self, file_path):
-        """Guarda un snapshot completo del estado actual"""
-        snapshot = {
-            'initial_conditions': self.initial_conditions,
-            'current_state': self.get_current_state(),
-            'history': self.history,
-            'total_food_collected': self.total_food_collected,
-            # Agregar pesos de la red neuronal si es necesario
+    
+if __name__ == "__main__":
+    # Ejemplo de uso
+    # Configuración personalizada
+    config = {
+        'genome_params': {
+            # 'vision_resolution': 64,
+            'fov': 60,
+            'max_step_size': 0.50,
+            'max_body_rotation': 0.1,
+            'max_eye_rotation': 0.05
         }
-        np.save(file_path, snapshot, allow_pickle=True)
+    }
 
-    def load_snapshot(self, file_path):
-        """Carga un snapshot guardado"""
-        snapshot = np.load(file_path, allow_pickle=True).item()
-        self.initial_conditions = snapshot['initial_conditions']
-        self.reset()
-        # Restaurar estado desde snapshot
-        # (Implementación detallada dependerá de la estructura de datos)
+    # Crear simulador
+    simulator = HeadlessSimulator(initial_conditions=config, random_seed=69)
+
+    # Ejecutar un episodio completo
+    results = simulator.run_episode()
+    print(f"Episodio terminado en {results['total_steps']} pasos")
+    print(f"Energía final: {results['final_energy']}")
+    print(f"Comida recolectada: {results['food_collected']}")
+
+    # Ejecutar paso a paso
+    simulator.reset_episode()
+    for i in range(100):
+        print(i)
+        state, done = simulator.run_step()
+        if done:
+            break
