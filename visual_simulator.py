@@ -7,7 +7,7 @@ from nymbot import Nymbot
 from config import SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_COLOR, FOOD_ENERGY, MAX_STEPS
 
 class Simulation(arcade.Window):
-    def __init__(self, initial_conditions=None, playback_mode=False, playback_snapshot=None):
+    def __init__(self, initial_conditions=None, playback_mode=False, playback_snapshot=None, random_seed=None):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, "Nymbot Simulator")
         arcade.set_background_color(BACKGROUND_COLOR)
         
@@ -295,7 +295,7 @@ def main():
             'max_eye_rotation': 0.05
         }
     }
-    sim = Simulation(initial_conditions=custom_init)
+    _ = Simulation(initial_conditions=custom_init)
     arcade.run()
 
     # Ejemplo: modo reproducción
