@@ -97,7 +97,7 @@ class Simulation(arcade.Window):
                          (pos[1] - self.food_pos[1])**2) < radius + 8
     
     def on_draw(self):
-        """Método de dibujo principal"""
+        """Método de dibujo principal."""
         self.clear()
         
         # Dibujar paredes
